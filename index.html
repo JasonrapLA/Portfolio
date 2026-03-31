@@ -412,37 +412,27 @@
 
   .project-thumb {
     width: 100%;
-    aspect-ratio: 4/3;
     display: block;
     overflow: hidden;
-    position: relative;
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    line-height: 0;
   }
 
   .project-thumb img {
     width: 100%;
-    height: 100%;
+    height: 260px;
     object-fit: cover;
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
   }
 
-  .project-thumb {
-    position: relative !important;
+  .project-thumb .ph {
+    height: 260px;
   }
 
-  .project-thumb::before {
-    content: "";
-    display: block;
-    padding-top: 75%;
-  }
+  .project-grid.count-1 .project-thumb img,
+  .project-grid.count-1 .project-thumb .ph { height: 400px; }
 
-  .project-grid.count-1 .project-thumb { aspect-ratio: 21/7; }
-  .project-grid.count-5 .project:first-child .project-thumb { aspect-ratio: 21/7; }
+  .project-grid.count-5 .project:first-child .project-thumb img,
+  .project-grid.count-5 .project:first-child .project-thumb .ph { height: 400px; }
 
   .ph {
     width: 100%; height: 100%;
@@ -1212,7 +1202,7 @@
   </div>
   <div class="contact-right">
     <div>
-      <a href="mailto:hello [at] jasonrappaport [dot] com" class="contact-link">hello@jasonrappaport.com</a>
+      <a href="/cdn-cgi/l/email-protection#e68e838a8a89c6bd8792bbc68c87958988948796968796899492c6bd828992bbc685898b" class="contact-link"><span class="__cf_email__" data-cfemail="046c6168686b446e65776b6a7665747465746b76702a676b69">[email&#160;protected]</span></a>
       <a href="https://linkedin.com/in/jasonrappaport" target="_blank" class="contact-link">LinkedIn</a>
     </div>
     <p class="contact-note">Los Angeles, CA · Group Creative Director · Writer</p>
@@ -1225,11 +1215,5 @@
   <span>Built to move people</span>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-  window.addEventListener('scroll', () => {
-    document.getElementById('nav')?.classList.toggle('scrolled', window.scrollY > 10);
-  });
-
-  const obs = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) { e.target.classList.add('visible'); obs.un
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  window.addEventListener(
