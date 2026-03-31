@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="all">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jason Rappaport — GCD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --black: #080808;
+    --white: #f0f0f0;
+    --green: #b8ff00;
+    --border: 2px solid #080808;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--white);
+    color: var(--black);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    cursor: crosshair;
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 200;
+    background: var(--black);
+    color: var(--white);
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    height: 52px;
+    border-bottom: var(--border);
+  }
+
+  .nav-name {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    border-right: var(--border);
+    color: var(--white);
+  }
+
+  .nav-links {
+    display: flex;
+    list-style: none;
+    height: 100%;
+  }
+
+  .nav-links li {
+    border-left: 1px solid rgba(240,240,240,0.12);
+  }
+
+  .nav-links a {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 20px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240,240,240,0.5);
+    transition: color 0.15s, background 0.15s;
+  }
+
+  .nav-links a:hover {
+    color: var(--green);
+    background: rgba(184,255,0,0.06);
+  }
+
+  .nav-status {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--green);
+    border-left: var(--border);
+    gap: 8px;
+  }
+
+  .nav-status::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  /* ── HERO ── */
+  .hero {
+    margin-top: 52px;
+    min-height: calc(100vh - 52px);
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    grid-template-rows: 1fr auto;
+    border-bottom: var(--border);
+  }
+
+  .hero-main {
+    grid-column: 1;
+    grid-row: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 48px;
+    border-right: var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-counter {
+    position: absolute;
+    top: 48px; right: 48px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: rgba(8,8,8,0.3);
+    text-transform: uppercase;
+  }
+
+  .hero-name {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(80px, 11vw, 160px);
+    font-weight: 700;
+    line-height: 0.88;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+
+  .hero-name .line-2 {
+    display: block;
+    color: var(--white);
+    -webkit-text-stroke: 2px var(--black);
+  }
+
+  .hero-name .accent { color: var(--green); }
+
+  .hero-title-row {
+    margin-top: 32px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+
+  .hero-title {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: var(--black);
+    color: var(--white);
+    padding: 8px 16px;
+  }
+
+  .hero-role {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    background: var(--green);
+    color: var(--black);
+    padding: 8px 16px;
+  }
+
+  .hero-sidebar {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    border-left: var(--border);
+  }
+
+  .hero-sidebar-top {
+    flex: 1;
+    padding: 48px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-bottom: var(--border);
+  }
+
+  .sidebar-label {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.35);
+    margin-bottom: 16px;
+  }
+
+  .sidebar-stat {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+
+  .sidebar-stat span {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.4);
+    margin-top: 6px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .hero-sidebar-mid {
+    padding: 28px 32px;
+    border-bottom: var(--border);
+    background: var(--black);
+  }
+
+  .sidebar-tagline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 400;
+    line-height: 1.3;
+    color: var(--white);
+    letter-spacing: -0.01em;
+  }
+
+  .sidebar-tagline strong {
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  .hero-sidebar-bot {
+    padding: 24px 32px;
+  }
+
+  .sidebar-meta {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: rgba(8,8,8,0.4);
+    line-height: 2;
+    text-transform: uppercase;
+  }
+
+  .hero-bottom {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    border-right: var(--border);
+    border-top: var(--border);
+    height: 52px;
+    overflow: hidden;
+  }
+
+  .ticker {
+    display: flex;
+    gap: 0;
+    animation: ticker 20s linear infinite;
+    white-space: nowrap;
+  }
+
+  .ticker-item {
+    padding: 0 24px;
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.4);
+    border-right: 1px solid rgba(8,8,8,0.1);
+    height: 52px;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .ticker-item.highlight {
+    color: var(--black);
+    background: var(--green);
+    font-weight: 700;
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  /* ── SECTION HEADER ── */
+  .section-head {
+    display: flex;
+    align-items: stretch;
+    border-bottom: var(--border);
+    height: 52px;
+  }
+
+  .section-head-label {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    border-right: var(--border);
+  }
+
+  .section-head-count {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.35);
+  }
+
+  .section-head-fill { flex: 1; }
+
+  .section-head-tag {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border-left: var(--border);
+    background: var(--green);
+    font-weight: 700;
+  }
+
+  /* ── WORK ── */
+  .work { border-bottom: var(--border); }
+
+  /* CLIENT BLOCK */
+  .client-block {
+    border-bottom: var(--border);
+  }
+
+  .client-block:last-child { border-bottom: none; }
+
+  .client-head {
+    display: flex;
+    align-items: stretch;
+    border-bottom: var(--border);
+    height: 44px;
+  }
+
+  .client-head-name {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    border-right: var(--border);
+    min-width: 240px;
+  }
+
+  .client-head-count {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: rgba(8,8,8,0.35);
+    text-transform: uppercase;
+  }
+
+  /* PROJECT GRID */
+  .project-grid {
+    display: grid;
+    gap: 0;
+  }
+
+  .project-grid.count-1 { grid-template-columns: 1fr; }
+  .project-grid.count-2 { grid-template-columns: 1fr 1fr; }
+  .project-grid.count-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .project-grid.count-4 { grid-template-columns: 1fr 1fr; }
+  .project-grid.count-5 { grid-template-columns: 1fr 1fr; }
+  .project-grid.count-6 { grid-template-columns: 1fr 1fr 1fr; }
+
+  .project-grid.count-5 .project:first-child { grid-column: span 2; }
+
+  .project {
+    position: relative;
+    border-right: var(--border);
+    border-bottom: var(--border);
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  .project:last-child,
+  .project:nth-child(3n) { border-right: none; }
+  .project-grid.count-2 .project:nth-child(2n) { border-right: none; }
+  .project-grid.count-1 .project { border-right: none; }
+
+  .project-thumb {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .project-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  .project-thumb {
+    position: relative !important;
+  }
+
+  .project-thumb::before {
+    content: "";
+    display: block;
+    padding-top: 75%;
+  }
+
+  .project-grid.count-1 .project-thumb { aspect-ratio: 21/7; }
+  .project-grid.count-5 .project:first-child .project-thumb { aspect-ratio: 21/7; }
+
+  .ph {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  /* on hover — green overlay strip at bottom */
+  .project-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: var(--green);
+    padding: 10px 16px;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .project:hover .project-overlay { transform: translateY(0); }
+
+  .overlay-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    color: var(--black);
+  }
+
+  .overlay-cat {
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.55);
+  }
+
+  /* placeholder colors — all desaturated, contrasted */
+  .ph-cox-1  { background: #6a7a88; }
+  .ph-cox-2  { background: #58687a; }
+  .ph-cox-3  { background: #7a8a9a; }
+  .ph-cox-4  { background: #4e6878; }
+  .ph-cox-5  { background: #8a9aaa; }
+  .ph-cox-6  { background: #607888; }
+  .ph-boost-1 { background: #a07830; }
+  .ph-boost-2 { background: #886020; }
+  .ph-boost-3 { background: #b88838; }
+  .ph-post-1  { background: #5a7858; }
+  .ph-post-2  { background: #486848; }
+  .ph-hall-1  { background: #906860; }
+  .ph-hall-2  { background: #785050; }
+  .ph-ps-1    { background: #383868; }
+  .ph-ps-2    { background: #404878; }
+  .ph-ps-3    { background: #303060; }
+  .ph-kia-1   { background: #505868; }
+  .ph-kia-2   { background: #485060; }
+  .ph-uop-1   { background: #587860; }
+  .ph-uop-2   { background: #486850; }
+  .ph-pdfa-1  { background: #605070; }
+  .ph-pdfa-2  { background: #504060; }
+  .ph-cal-1   { background: #887020; }
+  .ph-cal-2   { background: #786010; }
+  .ph-ua      { background: #303438; }
+  .ph-nissan  { background: #786848; }
+  .ph-beats   { background: #703030; }
+  .ph-dsc     { background: #305858; }
+  .ph-virgin  { background: #884040; }
+  .ph-pepsi   { background: #404080; }
+  .ph-espn    { background: #806040; }
+  .ph-prime   { background: #405068; }
+  .ph-oberto  { background: #603820; }
+  .ph-2k      { background: #385838; }
+  .ph-orgain  { background: #608050; }
+
+  /* ── AWARDS ── */
+  .awards { border-bottom: var(--border); }
+
+  .awards-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .show-block {
+    border-bottom: var(--border);
+    border-right: var(--border);
+  }
+
+  .awards-body .show-block:nth-child(even) { border-right: none; }
+  .awards-body .show-block:nth-last-child(-n+2) { border-bottom: none; }
+
+  .show-head {
+    display: flex;
+    align-items: stretch;
+    border-bottom: var(--border);
+    height: 44px;
+  }
+
+  .show-name {
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    border-right: var(--border);
+    flex: 1;
+  }
+
+  .show-tally {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.35);
+  }
+
+  .show-awards { padding: 0; }
+
+  .award-row {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid rgba(8,8,8,0.07);
+    min-height: 36px;
+  }
+
+  .award-row:last-child { border-bottom: none; }
+
+  .award-metal {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    min-width: 96px;
+    flex-shrink: 0;
+    border-right: 1px solid rgba(8,8,8,0.07);
+    font-weight: 700;
+  }
+
+  .award-cat {
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 11px;
+    color: rgba(8,8,8,0.55);
+    line-height: 1.3;
+  }
+
+  /* tier colors */
+  .tier-grand  .award-metal { background: var(--green); color: var(--black); }
+  .tier-special .award-metal { background: var(--black); color: var(--white); }
+  .tier-gold   .award-metal { color: #8a6800; }
+  .tier-silver .award-metal { color: #5a5a5a; }
+  .tier-bronze .award-metal { color: #6a3a1a; }
+  .tier-list   .award-metal { color: rgba(8,8,8,0.3); font-weight: 400; }
+
+  /* ── ABOUT ── */
+  .about { border-bottom: var(--border); }
+
+  .about-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .about-left {
+    padding: 64px 48px;
+    border-right: var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .about-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(52px, 7vw, 96px);
+    font-weight: 700;
+    line-height: 0.88;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+  }
+
+  .about-heading .inv {
+    display: block;
+    background: var(--black);
+    color: var(--white);
+    padding: 0 8px;
+    margin: 4px 0;
+  }
+
+  .about-heading .grn {
+    display: block;
+    color: var(--green);
+    background: var(--black);
+    padding: 0 8px;
+  }
+
+  .about-brands {
+    margin-top: 48px;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 2;
+    color: rgba(8,8,8,0.4);
+  }
+
+  .about-right {
+    padding: 64px 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .about-bio {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+  }
+
+  .about-detail {
+    font-size: 12px;
+    line-height: 1.9;
+    color: rgba(8,8,8,0.5);
+  }
+
+  /* ── CONTACT ── */
+  .contact {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 340px;
+    border-bottom: var(--border);
+  }
+
+  .contact-left {
+    background: var(--black);
+    padding: 64px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-right: var(--border);
+  }
+
+  .contact-heading {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(52px, 7vw, 96px);
+    font-weight: 700;
+    line-height: 0.88;
+    letter-spacing: -0.04em;
+    text-transform: uppercase;
+    color: var(--white);
+  }
+
+  .contact-heading .grn { color: var(--green); }
+
+  .contact-cta {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240,240,240,0.3);
+  }
+
+  .contact-right {
+    padding: 64px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .contact-link {
+    display: block;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--black);
+    text-decoration: none;
+    text-transform: uppercase;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+    padding-bottom: 4px;
+  }
+
+  .contact-link:hover {
+    color: var(--green);
+    border-bottom-color: var(--green);
+  }
+
+  .contact-note {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(8,8,8,0.35);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    height: 44px;
+    background: var(--black);
+  }
+
+  footer span {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(240,240,240,0.25);
+  }
+
+  footer .grn { color: var(--green); }
+
+  /* ── REVEAL ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-name">Jason Rappaport</a>
+  <ul class="nav-links">
+    <li><a href="#work">Work</a></li>
+    <li><a href="#awards">Awards</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <div class="nav-status">Available</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-main">
+    <span class="hero-counter">GCD_001 / LOS ANGELES</span>
+    <h1 class="hero-name">
+      Jason
+      <span class="line-2">Rappa<span class="accent">port</span></span>
+    </h1>
+    <div class="hero-title-row">
+      <span class="hero-title">Group Creative Director</span>
+      <span class="hero-role">Writer</span>
+    </div>
+  </div>
+
+  <div class="hero-sidebar">
+    <div class="hero-sidebar-top">
+      <p class="sidebar-label">Career total</p>
+      <p class="sidebar-stat">80+<span>Awards across 12 shows</span></p>
+    </div>
+    <div class="hero-sidebar-mid">
+      <p class="sidebar-tagline">Ideas that earn attention.<br><strong>Not just time on air.</strong></p>
+    </div>
+    <div class="hero-sidebar-bot">
+      <p class="sidebar-meta">
+        Omnicom · Los Angeles<br>
+        Cox · Boost · Postmates · Hallmark<br>
+        Under Armour · Beats · Pepsi · Kia
+      </p>
+    </div>
+  </div>
+
+  <div class="hero-bottom">
+    <div class="ticker">
+      <span class="ticker-item highlight">Cannes Grand Prix</span>
+      <span class="ticker-item">Titanium Lion</span>
+      <span class="ticker-item highlight">One Show Gold ×8</span>
+      <span class="ticker-item">LIAA Grand Prix</span>
+      <span class="ticker-item highlight">Clio Gold ×9</span>
+      <span class="ticker-item">D&amp;AD Graphite Pencil</span>
+      <span class="ticker-item highlight">AICP Campaign of the Year</span>
+      <span class="ticker-item">AdAge Campaign of the Year</span>
+      <span class="ticker-item highlight">Cannes Grand Prix</span>
+      <span class="ticker-item">Titanium Lion</span>
+      <span class="ticker-item highlight">One Show Gold ×8</span>
+      <span class="ticker-item">LIAA Grand Prix</span>
+      <span class="ticker-item highlight">Clio Gold ×9</span>
+      <span class="ticker-item">D&amp;AD Graphite Pencil</span>
+      <span class="ticker-item highlight">AICP Campaign of the Year</span>
+      <span class="ticker-item">AdAge Campaign of the Year</span>
+    </div>
+  </div>
+</section>
+
+<!-- WORK -->
+<section class="work" id="work">
+  <div class="section-head">
+    <span class="section-head-label">Work</span>
+    <span class="section-head-count">30 projects</span>
+    <span class="section-head-fill"></span>
+    <span class="section-head-tag">Image-led · Client grouped</span>
+  </div>
+
+  <!-- COX -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Cox</span>
+      <span class="client-head-count">6 projects</span>
+    </div>
+    <div class="project-grid count-6">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/Convey_Hero_r4qxfs.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Project Convey</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/DrawnCloser1500_qqda8z.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Drawn Closer</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/Visiting_Hours_-_PR1_LOGO_bqvn0t.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Visiting Hours</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/Screen_2BShot_2B2020-05-15_2Bat_2B9.58.51_2BAM_w2it30.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">One Call a Day</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/grandstories_d7l83s.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">GrandStories</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-cox-6"></div></div><div class="project-overlay"><span class="overlay-title">Homelife</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- BOOST -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Boost Mobile</span>
+      <span class="client-head-count">3 projects</span>
+    </div>
+    <div class="project-grid count-3">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/boost.gif" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Boost Your Voice</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-boost-2"></div></div><div class="project-overlay"><span class="overlay-title">Come to Data</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-boost-3"></div></div><div class="project-overlay"><span class="overlay-title">Watch Until You Go Blind</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- POSTMATES -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Postmates</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/PostmatesNY_Hero_uoqtna.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">NYC</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/IMG_1441_sd7qvg.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">LA</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- HALLMARK -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Hallmark</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/ezgif.com-optimize.gif" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Dear Mom</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-hall-2"></div></div><div class="project-overlay"><span class="overlay-title">Valentine's Day</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- PLAYSTATION -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">PlayStation</span>
+      <span class="client-head-count">3 projects</span>
+    </div>
+    <div class="project-grid count-3">
+      <div class="project"><div class="project-thumb"><div class="ph ph-ps-1"></div></div><div class="project-overlay"><span class="overlay-title">PS3 Pre-Launch</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-ps-2"></div></div><div class="project-overlay"><span class="overlay-title">NBA 07 The Life</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-ps-3"></div></div><div class="project-overlay"><span class="overlay-title">MLB The Show</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- KIA -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Kia</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/Kia_BG_s1rlmj.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">NBA</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-kia-2"></div></div><div class="project-overlay"><span class="overlay-title">Optima — Guinness Record</span><span class="overlay-cat">Stunt</span></div></div>
+    </div>
+  </div>
+
+  <!-- UOP -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">University of Phoenix</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><div class="ph ph-uop-1"></div></div><div class="project-overlay"><span class="overlay-title">Find Your Wings</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-uop-2"></div></div><div class="project-overlay"><span class="overlay-title">Change the System</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- CA LOTTERY -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">CA Lottery</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/CAlotto_c8dbj7.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Powerball</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-cal-2"></div></div><div class="project-overlay"><span class="overlay-title">Lucky for Life</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- PARTNERSHIP -->
+  <div class="client-block reveal">
+    <div class="client-head">
+      <span class="client-head-name">Partnership for a Drug-Free America</span>
+      <span class="client-head-count">2 projects</span>
+    </div>
+    <div class="project-grid count-2">
+      <div class="project"><div class="project-thumb"><div class="ph ph-pdfa-1"></div></div><div class="project-overlay"><span class="overlay-title">Sound Advice Project</span><span class="overlay-cat">Campaign</span></div></div>
+      <div class="project"><div class="project-thumb"><div class="ph ph-pdfa-2"></div></div><div class="project-overlay"><span class="overlay-title">Sound Advice Project II</span><span class="overlay-cat">Campaign</span></div></div>
+    </div>
+  </div>
+
+  <!-- SINGLES -->
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Under Armour</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-ua"></div></div><div class="project-overlay"><span class="overlay-title">Under Armour</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Nissan</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><img src="https://res.cloudinary.com/deabtpcmh/image/upload/rogue_marble_l5e2gx.jpg" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div class="project-overlay"><span class="overlay-title">Rogue — Marble Maze</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Beats</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-beats"></div></div><div class="project-overlay"><span class="overlay-title">Beats Pills</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Dollar Shave Club</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-dsc"></div></div><div class="project-overlay"><span class="overlay-title">Testimonials</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Virgin Mobile</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-virgin"></div></div><div class="project-overlay"><span class="overlay-title">Do It for the Data</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Pepsi</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-pepsi"></div></div><div class="project-overlay"><span class="overlay-title">World Cup</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">ESPN</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-espn"></div></div><div class="project-overlay"><span class="overlay-title">ESPY Awards</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Prime Video</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-prime"></div></div><div class="project-overlay"><span class="overlay-title">Fairfax</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Oberto</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-oberto"></div></div><div class="project-overlay"><span class="overlay-title">Eat Like an Alpha</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">2K Sports</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-2k"></div></div><div class="project-overlay"><span class="overlay-title">MLB</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+  <div class="client-block reveal">
+    <div class="client-head"><span class="client-head-name">Orgain</span><span class="client-head-count">1 project</span></div>
+    <div class="project-grid count-1"><div class="project"><div class="project-thumb"><div class="ph ph-orgain"></div></div><div class="project-overlay"><span class="overlay-title">Real Nutrition for Real Life</span><span class="overlay-cat">Campaign</span></div></div></div>
+  </div>
+
+</section>
+
+<!-- AWARDS -->
+<section class="awards" id="awards">
+  <div class="section-head">
+    <span class="section-head-label">Recognition</span>
+    <span class="section-head-count">80+ awards</span>
+    <span class="section-head-fill"></span>
+    <span class="section-head-tag">12 shows</span>
+  </div>
+
+  <div class="awards-body">
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Cannes Lions</span><span class="show-tally">13 Lions · 17 Shortlists</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-grand"><span class="award-metal">Grand Prix</span><span class="award-cat">Promo</span></div>
+        <div class="award-row tier-special"><span class="award-metal">Titanium</span><span class="award-cat">Titanium Lion</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Health &amp; Wellness</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Entertainment</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Digital Craft</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Outdoor</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Digital Craft</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Direct</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Promo</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Entertainment</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Creative Strategy</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Creative Effectiveness</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Shortlist</span><span class="award-cat">×17</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">One Show</span><span class="show-tally">8G · 4S · 7B · 6 Merit</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Film</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Moving Image Craft</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Interactive, Online &amp; Mobile</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Branded Entertainment</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Visual Craft / Animation</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Long Form Video</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Experiential</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Moving Image Craft</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Short Form Branded Entertainment</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Integrated Branding</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Cultural Driver</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Use of Technology ×3</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Branded Entertainment Craft</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Film TV &amp; VOD</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Craft · Interactive · Outdoor Innovation</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Merit</span><span class="award-cat">×6</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Clios</span><span class="show-tally">9G · 3S · 4B · 3 Shortlist</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Creative Use of Data — Storytelling</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Emerging Technology</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Creative Use of Data</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Film ×5</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Creative Use of Data — Storytelling</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Human Centered Design</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Digital / Mobile &amp; Social Media Craft</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Innovation — Early-Stage Prototype</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Digital / Mobile — Emerging Technology</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Digital / Mobile · Innovation</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Shortlist</span><span class="award-cat">Integrated + ×2</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">D&amp;AD</span><span class="show-tally">2 Pencils · 2 Shortlists</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-special"><span class="award-metal">Graphite</span><span class="award-cat">Film / Innovation</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Wood</span><span class="award-cat">Animation 3D / Digital</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Shortlist</span><span class="award-cat">Film / Social Commercials</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Shortlist</span><span class="award-cat">TV / VOD over 120s</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Effies</span><span class="show-tally">1G · 3B</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">2018 Effie Awards</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Social Good — 2018</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">CA Lottery</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze</span><span class="award-cat">Nissan Rogue</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">ADC</span><span class="show-tally">1G · 1S · 2B</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Gold Cube</span><span class="award-cat">2022</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver Cube</span><span class="award-cat">2022</span></div>
+        <div class="award-row tier-bronze"><span class="award-metal">Bronze Cube</span><span class="award-cat">2022 ×2</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">LIAA / Lisbon</span><span class="show-tally">Grand Prix · Agency of the Year · 2G</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-grand"><span class="award-metal">Grand Prix</span><span class="award-cat">Lisbon International Advertising Festival</span></div>
+        <div class="award-row tier-special"><span class="award-metal">Agency / Year</span><span class="award-cat">Lisbon International Advertising Festival</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Integrated Campaign</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Promo</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">AdAge / Creativity</span><span class="show-tally">3 Wins · 2 Shortlists</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Craft of the Year — Social / Digital</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Campaign of the Year</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Best Experiential</span></div>
+        <div class="award-row tier-list"><span class="award-metal">Shortlist</span><span class="award-cat">×2</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">AICP</span><span class="show-tally">2 Wins</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Integrated Campaign of the Year</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Integrated Campaign</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Shots Awards</span><span class="show-tally">1G · 1S</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Gold</span><span class="award-cat">Shots Awards</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Concept</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Webbys</span><span class="show-tally">4 Wins</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Best Art Direction</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">×3</span></div>
+      </div>
+    </div>
+
+    <div class="show-block reveal">
+      <div class="show-head"><span class="show-name">Other</span><span class="show-tally">Shorty · ThinkLA · CommArts · LIA · Addy</span></div>
+      <div class="show-awards">
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Shorty Awards — Mental Health</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Best Visual Campaign — ThinkLA</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">Communication Arts ×2</span></div>
+        <div class="award-row tier-gold"><span class="award-metal">Winner</span><span class="award-cat">TBS Funniest Ads on TV</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">Addy Awards ×2</span></div>
+        <div class="award-row tier-silver"><span class="award-metal">Silver</span><span class="award-cat">London International Awards</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="section-head">
+    <span class="section-head-label">About</span>
+    <span class="section-head-fill"></span>
+    <span class="section-head-tag">Los Angeles · Omnicom</span>
+  </div>
+  <div class="about-inner">
+    <div class="about-left reveal">
+      <div class="about-heading">
+        The<span class="inv">work</span><span class="grn">speaks.</span>
+      </div>
+      <div class="about-brands">
+        Cox · Boost · Postmates · Hallmark<br>
+        Under Armour · Kia · Nissan · Beats<br>
+        Dollar Shave · Virgin · Pepsi · PS<br>
+        ESPN · Prime Video · CA Lottery<br>
+        Oberto · 2K Sports · Orgain · UOP
+      </div>
+    </div>
+    <div class="about-right reveal">
+      <p class="about-bio">Jason Rappaport is a Group Creative Director and writer with a career built on ideas that earn attention — not just time on air.</p>
+      <p class="about-detail">With deep roots in brand, campaign, and content, Jason has led creative across some of advertising's most demanding categories: telecom, automotive, entertainment, retail, and tech. His work lives at the intersection of culture and commerce — built to move people, not just product.<br><br>Currently at Omnicom, Los Angeles.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section class="contact" id="contact">
+  <div class="contact-left">
+    <h2 class="contact-heading">Let's<br><span class="grn">talk.</span></h2>
+    <p class="contact-cta">Available for select opportunities</p>
+  </div>
+  <div class="contact-right">
+    <div>
+      <a href="mailto:hello [at] jasonrappaport [dot] com" class="contact-link">hello@jasonrappaport.com</a>
+      <a href="https://linkedin.com/in/jasonrappaport" target="_blank" class="contact-link">LinkedIn</a>
+    </div>
+    <p class="contact-note">Los Angeles, CA · Group Creative Director · Writer</p>
+  </div>
+</section>
+
+<footer>
+  <span>© 2026 Jason Rappaport</span>
+  <span class="grn">GCD_001</span>
+  <span>Built to move people</span>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav')?.classList.toggle('scrolled', window.scrollY > 10);
+  });
+
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.un
